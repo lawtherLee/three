@@ -13,9 +13,14 @@ import * as dat from "dat.gui";
 
 // 创建立方体
 const createCube = (scene) => {
+  // 彩色立方体
+  const colorArr = ["red", "green", "blue", "pink", "orange", "write"];
+  const materialArr = colorArr.map(
+    (item) => new THREE.MeshBasicMaterial({ color: item }),
+  );
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const cube = new THREE.Mesh(geometry, material);
+  // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const cube = new THREE.Mesh(geometry, materialArr);
   cube.position.x = 0;
   cube.position.y = 0;
   cube.position.z = 0;
@@ -35,7 +40,8 @@ const createHelper = (scene) => {
 
 // 控制轨道控制器移动摄像机，也可以监听change事件
 const renderLoop = (controls, renderer, scene, camera, cube) => {
-  // cube.rotation.y += 0.1; 旋转
+  cube.rotation.z += 0.1;
+  // 旋转;
   renderer.render(scene, camera);
   // 必须手动update
   controls.update();
@@ -67,6 +73,41 @@ const createGUI = (cube, controls) => {
   gui.addColor(colorObj, "col").onChange((val) => {
     cube.material.color = new THREE.Color(val);
   });
+
+  // 控制立方体方向
+  const folder = gui.addFolder("位移");
+  folder.add(cube.position, "x", 0, 5, 0.1);
+  folder.add(cube.position, "y", 0, 5, 0.1);
+  folder.add(cube.position, "z", 0, 5, 0.1);
+
+  // 下拉菜单
+  gui
+    .add({ scheme: "default" }, "scheme", {
+      default: "default",
+      top: "top",
+      bottom: "bottom",
+      left: "left",
+      right: "right",
+    })
+    .onChange((val) => {
+      switch (val) {
+        case "top":
+          cube.position.set(0, 2, 0);
+          break;
+        case "bottom":
+          cube.position.set(0, -2, 0);
+          break;
+        case "default":
+          cube.position.set(0, 0, 0);
+          break;
+        case "left":
+          cube.position.set(-2, 0, 0);
+          break;
+        case "right":
+          cube.position.set(2, 0, 0);
+          break;
+      }
+    });
 };
 
 onMounted(() => {
@@ -91,7 +132,7 @@ onMounted(() => {
   // 创建轨道控制器
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; // 阻尼效果
-  // controls.autoRotate = true; // 自动旋转
+  controls.autoRotate = true; // 自动旋转
   // 垂直角度范围控制
   controls.maxPolarAngle = Math.PI;
   controls.minPolarAngle = 0;
@@ -103,7 +144,7 @@ onMounted(() => {
   controls.maxDistance = 100; // 可移动最远距离
 
   const cube = createCube(scene);
-  createGUI(cube, controls);
+  // createGUI(cube, controls);
 
   // 传入场景摄像机，渲染画面
   document.getElementById("my_three").appendChild(renderer.domElement);
