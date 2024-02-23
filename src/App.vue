@@ -8,23 +8,53 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { onMounted } from "vue";
 import * as THREE from "three";
 import * as dat from "dat.gui";
+import Stats from "three/addons/libs/stats.module.js";
 
 // const THREE = proxy.$THREE; // 挂载原型
 
 // 创建立方体
 const createCube = (scene) => {
-  // 彩色立方体
-  const colorArr = ["red", "green", "blue", "pink", "orange", "write"];
-  const materialArr = colorArr.map(
-    (item) => new THREE.MeshBasicMaterial({ color: item }),
-  );
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  let cube;
+  // **************彩色立方体**********************
+  // const colorArr = ["red", "green", "blue", "pink", "orange", "write"];
+  // const materialArr = colorArr.map(
+  //   (item) => new THREE.MeshBasicMaterial({ color: item }),
+  // );
+  // const geometry = new THREE.BoxGeometry(1, 1, 1);
+  // cube = new THREE.Mesh(geometry, cubeInfoArr);
+  // **********************************************
+
+  // **************基础绿色立方体**********************
   // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const cube = new THREE.Mesh(geometry, materialArr);
-  cube.position.x = 0;
-  cube.position.y = 0;
-  cube.position.z = 0;
-  scene.add(cube);
+  // const geometry = new THREE.BoxGeometry(1, 1, 1);
+  // cube = new THREE.Mesh(geometry, material);
+  // cube.position.x = 0;
+  // cube.position.y = 0;
+  // cube.position.z = 0;
+  // **********************************************
+
+  // *****************好几个立方体********************
+  const cubeInfoArr = [];
+  for (let i = 0; i < 2; i++) {
+    cubeInfoArr.push({
+      color: `rgb(${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))})`,
+      width: Math.floor(Math.random() * (3 - 1 + 1) + 1),
+      height: Math.floor(Math.random() * (3 - 1 + 1) + 1),
+      deep: Math.floor(Math.random() * (3 - 1 + 1) + 1),
+      x: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+      y: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+      z: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+    });
+  }
+  cubeInfoArr.map((item) => {
+    const { color, width, height, deep, x, y, z } = item;
+    const geometry = new THREE.BoxGeometry(width, height, deep);
+    const material = new THREE.MeshBasicMaterial({ color });
+    cube = new THREE.Mesh(geometry, material);
+    cube.position.set(x, y, z);
+    scene.add(cube);
+  });
+  // **********************************************
   return cube;
 };
 
@@ -39,15 +69,16 @@ const createHelper = (scene) => {
 // });
 
 // 控制轨道控制器移动摄像机，也可以监听change事件
-const renderLoop = (controls, renderer, scene, camera, cube) => {
+const renderLoop = (controls, renderer, scene, camera, cube, stats) => {
   cube.rotation.z += 0.1;
   // 旋转;
   renderer.render(scene, camera);
   // 必须手动update
   controls.update();
+  stats.update();
   // 根据计算机浏览器刷新帧率，递归调用
   requestAnimationFrame(() =>
-    renderLoop(controls, renderer, scene, camera, cube),
+    renderLoop(controls, renderer, scene, camera, cube, stats),
   );
 };
 
@@ -74,7 +105,7 @@ const createGUI = (cube, controls) => {
     cube.material.color = new THREE.Color(val);
   });
 
-  // 控制立方体方向
+  // 通过GUI控制立方体方向
   const folder = gui.addFolder("位移");
   folder.add(cube.position, "x", 0, 5, 0.1);
   folder.add(cube.position, "y", 0, 5, 0.1);
@@ -108,6 +139,17 @@ const createGUI = (cube, controls) => {
           break;
       }
     });
+};
+
+// 创建性能监视器
+const createStats = () => {
+  const stats = new Stats();
+  stats.setMode(0);
+  stats.domElement.style.position = "fixed";
+  stats.domElement.style.top = "0";
+  stats.domElement.style.left = "0";
+  document.body.appendChild(stats.domElement);
+  return stats;
 };
 
 onMounted(() => {
@@ -150,11 +192,12 @@ onMounted(() => {
   document.getElementById("my_three").appendChild(renderer.domElement);
   // 实现控制相机
 
-  renderLoop(controls, renderer, scene, camera, cube);
+  const stats = createStats();
+
+  renderLoop(controls, renderer, scene, camera, cube, stats);
 
   // 渲染方法不放在最后会出现首次渲染不加载的问题
   // renderer.render(scene, camera);
-
   resizeRender(renderer, camera);
 });
 </script>
