@@ -14,7 +14,8 @@ import Stats from "three/addons/libs/stats.module.js";
 
 // 创建立方体
 const createCube = (scene) => {
-  let cube;
+  let cube, group;
+  group = new THREE.Group(); // 创建分组
   // **************彩色立方体**********************
   // const colorArr = ["red", "green", "blue", "pink", "orange", "write"];
   // const materialArr = colorArr.map(
@@ -35,15 +36,15 @@ const createCube = (scene) => {
 
   // *****************好几个立方体********************
   const cubeInfoArr = [];
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 2500; i++) {
     cubeInfoArr.push({
       color: `rgb(${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))})`,
       width: Math.floor(Math.random() * (3 - 1 + 1) + 1),
       height: Math.floor(Math.random() * (3 - 1 + 1) + 1),
       deep: Math.floor(Math.random() * (3 - 1 + 1) + 1),
-      x: Math.floor(Math.random() * (5 - -5 + 1) + -5),
-      y: Math.floor(Math.random() * (5 - -5 + 1) + -5),
-      z: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+      x: Math.floor(Math.random() * (55 - -55 + 1) + -55),
+      y: Math.floor(Math.random() * (55 - -55 + 1) + -55),
+      z: Math.floor(Math.random() * (55 - -55 + 1) + -55),
     });
   }
   cubeInfoArr.map((item) => {
@@ -52,10 +53,14 @@ const createCube = (scene) => {
     const material = new THREE.MeshBasicMaterial({ color });
     cube = new THREE.Mesh(geometry, material);
     cube.position.set(x, y, z);
-    scene.add(cube);
+    // cube.name = "cu";
+    group.add(cube);
+    // scene.add(cube);
   });
+  scene.add(group);
   // **********************************************
-  return cube;
+
+  return { cube, group };
 };
 
 // 创建坐标轴
@@ -63,10 +68,6 @@ const createHelper = (scene) => {
   const axesHelper = new THREE.AxesHelper(10);
   scene.add(axesHelper);
 };
-
-// controls.addEventListener("change", () => {
-//   renderer.render(scene, camera);
-// });
 
 // 控制轨道控制器移动摄像机，也可以监听change事件
 const renderLoop = (controls, renderer, scene, camera, cube, stats) => {
@@ -152,6 +153,26 @@ const createStats = () => {
   return stats;
 };
 
+// 删除立方体
+const removeCube = (scene, group) => {
+  window.addEventListener("dblclick", () => {
+    group.children.map((item) => {
+      item.geometry.dispose();
+      item.material.dispose();
+      group.remove(item);
+    });
+    // 移除组对象
+    scene.remove(group);
+    // const arr = scene.children.filter((item) => item.name === "cu");
+    // const cube = arr[0];
+    // if (cube) {
+    //   cube.geometry.dispose();
+    //   cube.material.dispose();
+    //   scene.remove(cube);
+    // }
+  });
+};
+
 onMounted(() => {
   const scene = new THREE.Scene();
 
@@ -185,9 +206,10 @@ onMounted(() => {
   controls.minDistance = 5; // 可移动最近距离
   controls.maxDistance = 100; // 可移动最远距离
 
-  const cube = createCube(scene);
+  const { cube, group } = createCube(scene);
   // createGUI(cube, controls);
 
+  removeCube(scene, group);
   // 传入场景摄像机，渲染画面
   document.getElementById("my_three").appendChild(renderer.domElement);
   // 实现控制相机
