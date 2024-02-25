@@ -8,9 +8,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { onMounted } from "vue";
 import * as THREE from "three";
 import * as dat from "dat.gui";
-import Stats from "three/addons/libs/stats.module.js";
-
-// const THREE = proxy.$THREE; // 挂载原型
+import {
+  useCreateControls,
+  useCreateHelper,
+  useCreateStats,
+  useResizeRender,
+} from "./hooks/index.js";
 
 // 创建立方体
 const createCube = (scene) => {
@@ -36,15 +39,15 @@ const createCube = (scene) => {
 
   // *****************好几个立方体********************
   const cubeInfoArr = [];
-  for (let i = 0; i < 2500; i++) {
+  for (let i = 0; i < 5; i++) {
     cubeInfoArr.push({
       color: `rgb(${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))},${Math.floor(Math.random() * (255 + 1))})`,
       width: Math.floor(Math.random() * (3 - 1 + 1) + 1),
       height: Math.floor(Math.random() * (3 - 1 + 1) + 1),
       deep: Math.floor(Math.random() * (3 - 1 + 1) + 1),
-      x: Math.floor(Math.random() * (55 - -55 + 1) + -55),
-      y: Math.floor(Math.random() * (55 - -55 + 1) + -55),
-      z: Math.floor(Math.random() * (55 - -55 + 1) + -55),
+      x: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+      y: Math.floor(Math.random() * (5 - -5 + 1) + -5),
+      z: Math.floor(Math.random() * (5 - -5 + 1) + -5),
     });
   }
   cubeInfoArr.map((item) => {
@@ -63,15 +66,52 @@ const createCube = (scene) => {
   return { cube, group };
 };
 
-// 创建坐标轴
-const createHelper = (scene) => {
-  const axesHelper = new THREE.AxesHelper(10);
-  scene.add(axesHelper);
+// 创建其他几何体
+const createGeometry = (scene) => {
+  const circleGeometry = new THREE.CircleGeometry(1, 32); // 圆
+  const planeGeometry = new THREE.PlaneGeometry(2, 2); // 方片
+  const sphereGeometry = new THREE.SphereGeometry(1, 32, 16); // 球
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    side: THREE.DoubleSide, // 双面渲染
+  });
+  const circle = new THREE.Mesh(circleGeometry, material);
+  const plane = new THREE.Mesh(planeGeometry, material);
+  const sphere = new THREE.Mesh(sphereGeometry, material);
+  plane.position.set(2, 0, 0);
+  sphere.position.set(4, 0, 0);
+  scene.add(circle);
+  scene.add(plane);
+  scene.add(sphere);
 };
 
-// 控制轨道控制器移动摄像机，也可以监听change事件
-const renderLoop = (controls, renderer, scene, camera, cube, stats) => {
-  cube.rotation.z += 0.1;
+// 创建点状 线状球体
+const createSphere = (scene) => {
+  const geometry = new THREE.SphereGeometry(1, 32, 16);
+  // 点状球体
+  const pointMaterial = new THREE.PointsMaterial({
+    color: 0x6600ff,
+    size: 0.03,
+  });
+  // 线状物体
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x6600ff });
+  const points = new THREE.Points(geometry, pointMaterial);
+  const line = new THREE.Line(geometry, lineMaterial);
+  line.position.set(2, 0, 0);
+  scene.add(points);
+  scene.add(line);
+};
+
+// 球体贴图
+const createEarth = (scene) => {
+  const texture = new THREE.TextureLoader().load("src/assets/images/earth.png");
+  const geometry = new THREE.SphereGeometry(1, 32, 16);
+  const material = new THREE.MeshBasicMaterial({ map: texture });
+  const earth = new THREE.Mesh(geometry, material);
+  scene.add(earth);
+};
+const renderLoop = (controls, renderer, scene, camera, stats) => {
+  // cube.rotation.z += 0.1;
   // 旋转;
   renderer.render(scene, camera);
   // 必须手动update
@@ -79,78 +119,8 @@ const renderLoop = (controls, renderer, scene, camera, cube, stats) => {
   stats.update();
   // 根据计算机浏览器刷新帧率，递归调用
   requestAnimationFrame(() =>
-    renderLoop(controls, renderer, scene, camera, cube, stats),
+    renderLoop(controls, renderer, scene, camera, stats),
   );
-};
-
-// 适配浏览器窗口变化
-const resizeRender = (renderer, camera) => {
-  window.addEventListener("resize", () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix(); // 更新视锥体空间
-  });
-};
-
-// 创建图形界面工具
-const createGUI = (cube, controls) => {
-  const gui = new dat.GUI();
-  gui.add(document, "title");
-  gui.add(cube, "visible");
-  gui.add(controls, "reset"); // 重制轨道控制器初始角度
-  // 控制颜色改变
-  const colorObj = {
-    col: `#${cube.material.color.getHexString()}`, // 获取16进制字符串
-  };
-  gui.addColor(colorObj, "col").onChange((val) => {
-    cube.material.color = new THREE.Color(val);
-  });
-
-  // 通过GUI控制立方体方向
-  const folder = gui.addFolder("位移");
-  folder.add(cube.position, "x", 0, 5, 0.1);
-  folder.add(cube.position, "y", 0, 5, 0.1);
-  folder.add(cube.position, "z", 0, 5, 0.1);
-
-  // 下拉菜单
-  gui
-    .add({ scheme: "default" }, "scheme", {
-      default: "default",
-      top: "top",
-      bottom: "bottom",
-      left: "left",
-      right: "right",
-    })
-    .onChange((val) => {
-      switch (val) {
-        case "top":
-          cube.position.set(0, 2, 0);
-          break;
-        case "bottom":
-          cube.position.set(0, -2, 0);
-          break;
-        case "default":
-          cube.position.set(0, 0, 0);
-          break;
-        case "left":
-          cube.position.set(-2, 0, 0);
-          break;
-        case "right":
-          cube.position.set(2, 0, 0);
-          break;
-      }
-    });
-};
-
-// 创建性能监视器
-const createStats = () => {
-  const stats = new Stats();
-  stats.setMode(0);
-  stats.domElement.style.position = "fixed";
-  stats.domElement.style.top = "0";
-  stats.domElement.style.left = "0";
-  document.body.appendChild(stats.domElement);
-  return stats;
 };
 
 // 删除立方体
@@ -163,6 +133,7 @@ const removeCube = (scene, group) => {
     });
     // 移除组对象
     scene.remove(group);
+    // 根据名称一个个删除
     // const arr = scene.children.filter((item) => item.name === "cu");
     // const cube = arr[0];
     // if (cube) {
@@ -182,45 +153,32 @@ onMounted(() => {
     0.1,
     1000,
   );
+  camera.position.set(5, 5, 5);
+
   // 创建渲染器
   const renderer = new THREE.WebGLRenderer({ antialias: true }); // 抗锯齿
+  // 创建轨道控制器
+  const controls = useCreateControls(camera, renderer.domElement);
   // 设置画布大小
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  // camera.position.x = 5; set可以一次性设置3轴位置
-  camera.position.set(5, 5, 5);
+  useCreateHelper(scene);
 
-  createHelper(scene);
-
-  // 创建轨道控制器
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; // 阻尼效果
-  controls.autoRotate = true; // 自动旋转
-  // 垂直角度范围控制
-  controls.maxPolarAngle = Math.PI;
-  controls.minPolarAngle = 0;
-  //水平角度范围控制
-  controls.maxAzimuthAngle = 1.5 * Math.PI; // 摄像机左右翻转最大距离
-  // controls.minAzimuthAngle = 0.5 * Math.PI; // 摄像机左右翻转最小距离
-  // 摄像机移动范围控制
-  controls.minDistance = 5; // 可移动最近距离
-  controls.maxDistance = 100; // 可移动最远距离
-
-  const { cube, group } = createCube(scene);
-  // createGUI(cube, controls);
-
-  removeCube(scene, group);
+  // const { cube, group } = createCube(scene);
+  // createGeometry(scene);
+  // createSphere(scene);
+  // removeCube(scene, group);
+  createEarth(scene);
   // 传入场景摄像机，渲染画面
   document.getElementById("my_three").appendChild(renderer.domElement);
-  // 实现控制相机
 
-  const stats = createStats();
+  const stats = useCreateStats(); // 性能监视器
 
-  renderLoop(controls, renderer, scene, camera, cube, stats);
-
+  renderLoop(controls, renderer, scene, camera, stats);
   // 渲染方法不放在最后会出现首次渲染不加载的问题
   // renderer.render(scene, camera);
-  resizeRender(renderer, camera);
+
+  useResizeRender(renderer, camera);
 });
 </script>
 
