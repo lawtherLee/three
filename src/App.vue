@@ -14,6 +14,7 @@ import {
   useCreateStats,
   useResizeRender,
 } from "./hooks/index.js";
+import scene from "three/addons/offscreen/scene.js";
 
 // 创建立方体
 const createCube = (scene) => {
@@ -77,8 +78,8 @@ const createGeometry = (scene) => {
   });
   const circle = new THREE.Mesh(circleGeometry, material);
   const plane = new THREE.Mesh(planeGeometry, material);
-  const sphere = new THREE.Mesh(sphereGeometry, material);
   plane.position.set(2, 0, 0);
+  const sphere = new THREE.Mesh(sphereGeometry, material);
   sphere.position.set(4, 0, 0);
   scene.add(circle);
   scene.add(plane);
@@ -102,7 +103,7 @@ const createSphere = (scene) => {
   scene.add(line);
 };
 
-// 球体贴图
+// 地球仪球体贴图
 const createEarth = (scene) => {
   const texture = new THREE.TextureLoader().load("src/assets/images/earth.png");
   const geometry = new THREE.SphereGeometry(1, 32, 16);
@@ -110,6 +111,32 @@ const createEarth = (scene) => {
   const earth = new THREE.Mesh(geometry, material);
   scene.add(earth);
 };
+
+// 创建立方体贴图(全景公园)
+const createImgCube = (scene) => {
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const imgUrlArr = [
+    "posx.jpg",
+    "negx.jpg",
+    "posy.jpg",
+    "negy.jpg",
+    "posz.jpg",
+    "negz.jpg",
+  ];
+  const textureLoader = new THREE.TextureLoader(); // 纹理加载器
+  textureLoader.setPath("src/assets/images/park/"); // 公共基础路径
+  const materialArr = imgUrlArr.map((item) => {
+    const texture = textureLoader.load(item);
+    texture.colorSpace = THREE.SRGBColorSpace; // 设置图片颜色模式
+    return new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+    });
+  });
+  const cube = new THREE.Mesh(geometry, materialArr);
+  scene.add(cube);
+};
+
 const renderLoop = (controls, renderer, scene, camera, stats) => {
   // cube.rotation.z += 0.1;
   // 旋转;
@@ -168,7 +195,9 @@ onMounted(() => {
   // createGeometry(scene);
   // createSphere(scene);
   // removeCube(scene, group);
-  createEarth(scene);
+  // createEarth(scene);
+  createImgCube(scene);
+
   // 传入场景摄像机，渲染画面
   document.getElementById("my_three").appendChild(renderer.domElement);
 

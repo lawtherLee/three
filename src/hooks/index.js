@@ -86,7 +86,7 @@ export const useCreateGUI = (cube, controls) => {
 export const useCreateControls = (camera, rendererDom) => {
   const controls = new OrbitControls(camera, rendererDom);
   controls.enableDamping = true; // 阻尼效果
-  controls.autoRotate = true; // 自动旋转
+  controls.autoRotate = false; // 自动旋转
   // 垂直角度范围控制
   controls.maxPolarAngle = Math.PI;
   controls.minPolarAngle = 0;
