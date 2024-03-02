@@ -15,6 +15,7 @@ import {
   useResizeRender,
 } from "./hooks/index.js";
 import scene from "three/addons/offscreen/scene.js";
+import { CSS3DObject, CSS3DRenderer } from "three/addons";
 
 // 创建立方体
 const createCube = (scene) => {
@@ -129,18 +130,86 @@ const createImgCube = (scene) => {
     const texture = textureLoader.load(item);
     texture.colorSpace = THREE.SRGBColorSpace; // 设置图片颜色模式
     return new THREE.MeshBasicMaterial({
-      map: texture,
-      side: THREE.DoubleSide,
+      map: texture, // 纹理贴图
+      side: THREE.DoubleSide, // 可在内部查看
     });
   });
   const cube = new THREE.Mesh(geometry, materialArr);
+  cube.scale.set(1, 1, -1); // 镜面翻转
   scene.add(cube);
+};
+
+// 视频纹理贴图
+const createVideoPlane = (scene) => {
+  const planeGeometry = new THREE.PlaneGeometry(1, 0.5);
+  const video = document.createElement("video");
+  video.src = "src/assets/video/mouse_cat.mp4";
+  video.muted = true; // 静音
+  video.addEventListener("loadedmetadata", () => {
+    video.play();
+  });
+  const texture = new THREE.VideoTexture(video);
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    side: THREE.DoubleSide,
+  });
+  const plane = new THREE.Mesh(planeGeometry, material);
+  scene.add(plane);
+
+  const button = document.createElement("button");
+  button.innerHTML = "播放声音";
+  button.style.position = "fixed";
+  button.style.left = "50%";
+  button.style.top = "0";
+  document.body.appendChild(button);
+  button.addEventListener("click", () => (video.muted = !video.muted));
+};
+
+// 创建dom3D
+let labelRenderer;
+const createText3D = (scene) => {
+  const tag = document.createElement("span");
+  tag.innerHTML = "我是一个span";
+  tag.style.color = "white";
+
+  const tag3d = new CSS3DObject(tag);
+  tag3d.scale.set(1 / 16, 1 / 16);
+  scene.add(tag3d);
+  labelRenderer = new CSS3DRenderer();
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+  labelRenderer.domElement.style.pointerEvents = "all"; // 解决轨道控制器失灵的问题
+  labelRenderer.domElement.style.position = "fixed";
+  labelRenderer.domElement.style.top = "0";
+  labelRenderer.domElement.style.left = "0";
+  document.body.appendChild(labelRenderer.domElement);
+};
+
+// 点击事件
+const bindClick = (scene, camera) => {
+  window.addEventListener("click", (e) => {
+    // 定义光线投射对象
+    const raycater = new THREE.Raycaster();
+    // 定义二维向量对象(保存转换后的平面，xy坐标值)
+    const pointer = new THREE.Vector2();
+
+    // 屏幕坐标转换webGL坐标
+    // 将鼠标位置归一化为设备坐标，xy取值范围-1 +1
+    pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = (e.clientY / window.innerHeight) * 2 + 1;
+
+    // 更新摄像机和鼠标之间的连线
+    raycater.setFromCamera(pointer, camera);
+    // 获取这条线穿过了哪些物体
+    const list = raycater.intersectObjects(scene.children);
+    console.log(list);
+  });
 };
 
 const renderLoop = (controls, renderer, scene, camera, stats) => {
   // cube.rotation.z += 0.1;
   // 旋转;
   renderer.render(scene, camera);
+  // labelRenderer.render(scene, camera);
   // 必须手动update
   controls.update();
   stats.update();
@@ -196,7 +265,10 @@ onMounted(() => {
   // createSphere(scene);
   // removeCube(scene, group);
   // createEarth(scene);
-  createImgCube(scene);
+  // createImgCube(scene);
+  // createVideoPlane(scene);
+  // createText3D(scene);
+  // bindClick(scene, camera);
 
   // 传入场景摄像机，渲染画面
   document.getElementById("my_three").appendChild(renderer.domElement);
